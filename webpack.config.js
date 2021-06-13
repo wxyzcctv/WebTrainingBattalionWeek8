@@ -3,16 +3,16 @@ module.exports = {
     module: {
         rules: [
             {
-                test: /^.js$/,
+                test: /\.js$/,
                 use: {
                     loader: "babel-loader",
                     options: {
                         presets: ['@babel/preset-env'],
-                        plugins: ["@babel/plugin-transform-react-jsx"]
+                        plugins: [["@babel/plugin-transform-react-jsx", { pragma: 'createElement' }]]
                     }
                 }
             }
         ]
     },
-    mode: "development"
+    mode: "development",
 }
