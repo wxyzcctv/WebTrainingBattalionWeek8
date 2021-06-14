@@ -16,6 +16,38 @@ class Carousel extends Component {
             child.style.backgroundImage = `url(${recode})`;
             this.root.appendChild(child)
         }
+
+        let position = 0;
+
+        this.root.addEventListener('mousedown', event => {
+            let children = this.root.children;
+            let startX = event.clientX;
+
+            let move = event => {
+                let x = event.clientX - startX;
+                for (const child of children) {
+                    child.style.transition = 'none';
+                    child.style.transform = `translateX(${- position * 520 + x}px)`;
+                }
+            }
+
+            let up = event => {
+                let x = event.clientX - startX;
+                position = position - Math.round(x / 520);
+
+                for (const child of children) {
+                    child.style.transition = '';
+                    child.style.transform = `translateX(${- position * 520}px)`;
+                }
+                document.removeEventListener('mousemove', move);
+                document.removeEventListener('mouseup', up);
+            }
+            document.addEventListener('mousemove', move)
+            document.addEventListener('mouseup', up)
+            // 在document上监听move和up主要是为了能解决鼠标移出指定区域之后无法监听move和up的bug
+        })
+
+        /*
         let currentIndex = 0;
         setInterval(() => {
             let children = this.root.children;
@@ -35,6 +67,7 @@ class Carousel extends Component {
             }, 16)
             // 16毫秒正好是浏览器刷新一帧的时间
         }, 3000)
+        */
         return this.root;
     }
     mountTo(parent) {
