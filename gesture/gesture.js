@@ -1,91 +1,128 @@
 let element = document.documentElement;
 
+let isListeningMouse = false;
+
 element.addEventListener('mousedown', event => {
-    start(event);
+    // mousedown事件中event.butten表示鼠标按下按键的数字
+    // 1 << event.button和button << 1移位操作能等到数字对应的2的倍数
+    let context = Object.create(null);
+    contexts.set('mouse' + (1 << event.button), context)
+    start(event, context);
+
     let mousemove = event => {
-        move(event);
+        // mousemove事件中event.buttens二进制掩码表示鼠标按下按键的数字，0b0001 === 2， 0b0011 = 3
+        let button = 1;
+        while (button <= event.buttons) {
+            if (button & event.buttons) {
+                let key;
+                // 左键和中键相反了
+                if (button === 2) {
+                    key = 4;
+                } else if (button === 4) {
+                    key = 2
+                } else {
+                    key = button
+                }
+                let context = contexts.get('mouse' + key);
+                move(event, context);
+            }
+            button = button << 1
+        }
     }
     let mouseup = event => {
-        end(event);
-        element.removeEventListener('mousemove', mousemove)
-        element.removeEventListener('mouseup', mouseup)
+        let context = contexts.get('mouse' + (1 << event.button));
+        end(event, context);
+        contexts.delete('mouse' + (1 << event.button));
+        if (event.buttons === 0) {
+            element.removeEventListener('mousemove', mousemove)
+            element.removeEventListener('mouseup', mouseup);
+            isListeningMouse = false;
+        }
     }
-    element.addEventListener("mousemove", mousemove)
-    element.addEventListener("mouseup", mouseup)
+    if (!isListeningMouse) {
+        element.addEventListener("mousemove", mousemove)
+        element.addEventListener("mouseup", mouseup);
+        isListeningMouse = true;
+    }
 })
+
+let contexts = new Map();
 
 element.addEventListener("touchstart", event => {
     for (const toch of event.changedTouches) {
-        start(toch)
+        let context = Object.create(null);
+        contexts.set(toch.identifier, context)
+        start(toch, context)
     }
 })
 
 element.addEventListener("touchmove", event => {
     for (const toch of event.changedTouches) {
-        move(toch)
+        let context = contexts.get(toch.identifier)
+        move(toch, context)
     }
 })
 
 element.addEventListener("touchend", event => {
     for (const toch of event.changedTouches) {
-        end(toch)
+        let context = contexts.get(toch.identifier)
+        end(toch, context)
+        contexts.delete(toch.identifier)
     }
 })
 element.addEventListener("touchcancel", event => {
     for (const toch of event.changedTouches) {
-        cancel(toch)
+        let context = contexts.get(toch.identifier)
+        cancel(toch, context);
+        contexts.delete(toch.identifier);
     }
 })
 
-let handler;
-let startX, startY;
-let isPan = false, isTap = true, isPress = false;
-
-let start = (point) => {
+let start = (point, context) => {
     // console.log("start", point.clientX, point.clientY);
-    startX = point.clientX, startY = point.clientY;
+    context.startX = point.clientX, context.startY = point.clientY;
 
-    isTap = true;
-    isPan = false;
-    isPress = false;
+    context.isTap = true;
+    context.isPan = false;
+    context.isPress = false;
 
-    handler = setTimeout(() => {
-        isTap = false;
-        isPan = false;
-        isPress = true;
-        handler = null;
+    context.handler = setTimeout(() => {
+        context.isTap = false;
+        context.isPan = false;
+        context.isPress = true;
+        context.handler = null;
         console.log('press');
     }, 500);
 }
-let move = (point) => {
-    let dx = point.clientX, dy = point.clientY;
-    if (!isPan && dx ** 2 + dy ** 2 > 100) {
-        isTap = false;
-        isPan = true;
-        isPress = false;
+let move = (point, context) => {
+    let dx = point.clientX - context.startX, dy = point.clientY - context.startY;
+    if (!context.isPan && dx ** 2 + dy ** 2 > 100) {
+        context.isTap = false;
+        context.isPan = true;
+        context.isPress = false;
         console.log('panstart');
-        clearTimeout(handler)
+        clearTimeout(context.handler)
     }
-    if (isPan) {
+    if (context.isPan) {
         console.log(dx, dy);
         console.log('pan');
     }
     // console.log("move", point.clientX, point.clientY);
 }
-let end = (point) => {
-    if (isTap) {
+let end = (point, context) => {
+    if (context.isTap) {
         console.log('tap');
-        clearTimeout(handler);
+        clearTimeout(context.handler);
     }
-    if (isPan) {
+    if (context.isPan) {
         console.log('panend');
     }
-    if (isPress) {
+    if (context.isPress) {
         console.log("pressend");
     }
     // console.log("end", point.clientX, point.clientY);
 }
-let cancel = (point) => {
-    clearTimeout(handler);
+let cancel = (point, context) => {
+    clearTimeout(context.handler);
     console.log("cancel", point.clientX, point.clientY);
 }
