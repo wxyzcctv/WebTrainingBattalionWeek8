@@ -19,15 +19,17 @@ export class Timeline {
             for (const animation of this[ANIMARIONS]) {
                 let t;
                 if (this[START_TIME].get(animation) < startTime) {
-                    t = now - startTime - this[PAUSE_TIME];
+                    t = now - startTime - this[PAUSE_TIME] - animation.delay;
                 } else {
-                    t = now - this[START_TIME].get(animation) - this[PAUSE_TIME];
+                    t = now - this[START_TIME].get(animation) - this[PAUSE_TIME] - animation.delay;
                 }
                 if (animation.duration < t) {
                     this[ANIMARIONS].delete(animation)
                     t = animation.duration
                 }
-                animation.receive(t);
+                if (t > 0) {
+                    animation.receive(t);
+                }
             }
             this[TICK_HANDLER] = requestAnimationFrame(this[TICK])
         }
@@ -43,7 +45,15 @@ export class Timeline {
         this[TICK]();
     }
 
-    restart() { }
+    restart() {
+        this.pause();
+        let startTime = Date.now();
+        this[PAUSE_TIME] = 0;
+        this[ANIMARIONS] = new Set();
+        this[START_TIME] = new Map();
+        this[TICK_HANDLER] = null;
+        this[PAUSE_START] = 0;
+    }
 
     add(animation, startTime) {
         if (arguments.length < 2) {
@@ -56,6 +66,8 @@ export class Timeline {
 
 export class Animation {
     constructor(object, property, startValue, endValue, duration, delay, timingFunction, template) {
+        timingFunction = timingFunction || (v => v);
+        template = template || (v => v);
         this.object = object;
         this.property = property;
         this.startValue = startValue;
@@ -67,6 +79,7 @@ export class Animation {
     }
     receive(time) {
         let range = this.endValue - this.startValue;
-        this.object[this.property] = this.template(this.startValue + range * time / this.duration)
+        let progress = this.timingFunction(time / this.duration);
+        this.object[this.property] = this.template(this.startValue + range * progress)
     }
 }
