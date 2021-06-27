@@ -3,14 +3,33 @@ import { Carousel } from './carousel.js'
 import { Timeline, Animation } from './animation.js'
 
 let d = [
-    "./static/dog1.jpg",
-    "./static/dog2.jpg",
-    "./static/dog3.jpg",
-    "./static/dog4.jpg",
-    "./static/dog5.jpg",
+    {
+        img: "https://raw.githubusercontent.com/wxyzcctv/WebTrainingBattalionWeek8/main/static/dog1.jpg",
+        url: 'https://time.geekbang.org/'
+
+    },
+    {
+        img: "https://raw.githubusercontent.com/wxyzcctv/WebTrainingBattalionWeek8/main/static/dog2.jpg",
+        url: 'https://time.geekbang.org/'
+    },
+    {
+        img: "https://raw.githubusercontent.com/wxyzcctv/WebTrainingBattalionWeek8/main/static/dog3.jpg",
+        url: 'https://time.geekbang.org/'
+    },
+    {
+        img: "https://raw.githubusercontent.com/wxyzcctv/WebTrainingBattalionWeek8/main/static/dog4.jpg",
+        url: 'https://time.geekbang.org/'
+    },
+    {
+        img: "https://raw.githubusercontent.com/wxyzcctv/WebTrainingBattalionWeek8/main/static/dog5.jpg",
+        url: 'https://time.geekbang.org/'
+    }
 ]
 
-let a = <Carousel src={d}></Carousel>
+let a = <Carousel src={d}
+    onChange={event => console.log(event.detail.position)}
+    onClick={event => window.location.href = event.detail.data.url}
+></Carousel >
 
 a.mountTo(document.body)
 

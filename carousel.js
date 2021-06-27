@@ -1,21 +1,20 @@
-import { Component } from "./framewok.js";
+import { Component, STATE, ATTRIBUTE } from "./framewok.js";
 import { enableGesture } from "./gesture/gesture.js";
 import { Timeline, Animation } from './animation.js';
 import { ease } from './ease.js';
+
+export { STATE, ATTRIBUTE } from './framewok.js'
+
 export class Carousel extends Component {
     constructor() {
         super();
-        this.attribute = Object.create(null);
     }
-    setAttribute(name, value) {
-        this.attribute[name] = value;
-    }
-    rander() {
+    render() {
         this.root = document.createElement("div");
         this.root.classList.add("Carousel");
-        for (let recode of this.attribute.src) {
+        for (let recode of this[ATTRIBUTE].src) {
             let child = document.createElement("div");
-            child.style.backgroundImage = `url(${recode})`;
+            child.style.backgroundImage = `url(${recode.img})`;
             this.root.appendChild(child)
         }
         enableGesture(this.root);
@@ -24,11 +23,35 @@ export class Carousel extends Component {
 
         let children = this.root.children;
 
-        let position = 0;
+        let handler = null;
+
+        this[STATE].position = 0;
+
+        let t = 0;
+        let ax = 0;
+
+        this.root.addEventListener('start', event => {
+            timeline.pause();
+            clearInterval(handler);
+            if (Date.now() - t < 1500) {
+                let progress = (Date.now() - t) / 1500;
+                ax = ease(progress) * 520 - 520;
+            } else {
+                ax = 0;
+            }
+        })
+
+        this.root.addEventListener('tap', event => {
+            console.log(this[ATTRIBUTE].src[this[STATE].position])
+            this.triggerEvent('click', {
+                data: this[ATTRIBUTE].src[this[STATE].position],
+                position: this[STATE].position
+            })
+        })
 
         this.root.addEventListener('pan', event => {
-            let x = event.clientX - event.startX
-            let current = position - ((x - x % 520) / 520);
+            let x = event.clientX - event.startX - ax;
+            let current = this[STATE].position - ((x - x % 520) / 520);
 
             for (const offset of [-1, 0, 1]) {
                 let pos = current + offset;
@@ -38,34 +61,59 @@ export class Carousel extends Component {
             }
         })
 
-        this.root.addEventListener('panend', event => {
-            let x = event.clientX - event.startX;
-            position = position - Math.round(x / 520);
+        this.root.addEventListener('end', event => {
+            timeline.reset();
+            timeline.start();
+            handler = setInterval(nextPicture, 3000)
 
-            for (const offset of [0, - Math.sign(Math.round(x / 520) - x + 260 * Math.sign(x))]) {
-                let pos = position + offset;
-                pos = (pos + children.length) % children.length;
-                children[pos].style.transition = '';
-                children[pos].style.transform = `translateX(${- pos * 520 + offset * 520}px)`;
+            let x = event.clientX - event.startX - ax;
+            let current = this[STATE].position - ((x - x % 520) / 520);
+
+            let direction = Math.round((x % 520) / 520);
+
+            if (event.isFlick) {
+                if (event.velocity < 0) {
+                    direction = Math.ceil((x % 520) / 520);
+                } else {
+                    direction = Math.floor((x % 520) / 520);
+                }
             }
+
+            for (const offset of [-1, 0, 1]) {
+                let pos = current + offset;
+                pos = (pos % children.length + children.length) % children.length;
+
+                children[pos].style.transition = 'none';
+                timeline.add(new Animation(children[pos].style, "transform",
+                    - pos * 520 + offset * 520 + x % 520,
+                    - pos * 520 + offset * 520 + direction * 520,
+                    1500, 0, ease, v => `translateX(${v}px)`))
+            }
+
+            this[STATE].position = this[STATE].position - ((x - x % 520) / 520) - direction;
+            this[STATE].position = (this[STATE].position % children.length + children.length) % children.length;
+            this.triggerEvent('change', { position: this[STATE].position })
+
         })
 
-        setInterval(() => {
+        let nextPicture = () => {
             let children = this.root.children;
-            let nextIndex = (position + 1) % children.length;//此时current会在1~children.length 之间不断循环
+            let nextIndex = (this[STATE].position + 1) % children.length;//此时current会在1~children.length 之间不断循环
 
-            let current = children[position];
+            let current = children[this[STATE].position];
             let next = children[nextIndex];
 
-            next.style.transition = "none";
-            next.style.transform = `translateX(${520 - nextIndex * 520}px)`;
+            t = Date.now();
 
-            timeline.add(new Animation(current.style, "transform", - position * 520, - 520 - position * 520, 500, 0, ease, v => `translateX(${v}px)`))
-            timeline.add(new Animation(next.style, "transform", 520 - nextIndex * 520, - nextIndex * 520, 500, 0, ease, v => `translateX(${v}px)`))
+            timeline.add(new Animation(current.style, "transform", - this[STATE].position * 520, - 520 - this[STATE].position * 520, 1500, 0, ease, v => `translateX(${v}px)`))
+            timeline.add(new Animation(next.style, "transform", 520 - nextIndex * 520, - nextIndex * 520, 1500, 0, ease, v => `translateX(${v}px)`))
 
-            position = nextIndex;
+            this[STATE].position = nextIndex;
+            this.triggerEvent('change', { position: this[STATE].position })
             // 16毫秒正好是浏览器刷新一帧的时间
-        }, 3000)
+        }
+
+        handler = setInterval(nextPicture, 3000);
 
         /*
         this.root.addEventListener('mousedown', event => {
@@ -126,8 +174,5 @@ export class Carousel extends Component {
         }, 3000)
         */
         return this.root;
-    }
-    mountTo(parent) {
-        parent.appendChild(this.rander())
     }
 }

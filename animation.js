@@ -57,7 +57,7 @@ export class Timeline {
         this[TICK]();
     }
 
-    restart() {
+    reset() {
         this.pause();
         let startTime = Date.now();
         this.state = "Inited"
