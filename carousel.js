@@ -42,7 +42,6 @@ export class Carousel extends Component {
         })
 
         this.root.addEventListener('tap', event => {
-            console.log(this[ATTRIBUTE].src[this[STATE].position])
             this.triggerEvent('click', {
                 data: this[ATTRIBUTE].src[this[STATE].position],
                 position: this[STATE].position
